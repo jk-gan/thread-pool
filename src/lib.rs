@@ -15,8 +15,13 @@ impl ThreadPool {
             .map(|_| {
                 let clone = receiver.clone();
                 std::thread::spawn(move || loop {
-                    let work = clone.lock().unwrap().recv().unwrap();
+                    let work = match clone.lock().unwrap().recv() {
+                        Ok(work) => work,
+                        Err(_) => break,
+                    };
+                    println!("Start");
                     work();
+                    println!("Finish");
                 })
             })
             .collect();
@@ -34,7 +39,9 @@ mod tests {
     #[test]
     fn it_works() {
         let pool = ThreadPool::new(10);
-        pool.execute(|| println!("Hello from thread"));
-        pool.execute(|| println!("Hello from thread"));
+        let foo = || std::thread::sleep(std::time::Duration::from_secs(1));
+        pool.execute(foo.clone());
+        pool.execute(foo);
+        std::thread::sleep(std::time::Duration::from_secs(2));
     }
 }
